@@ -1,19 +1,13 @@
-#include <utility>
-#include <deque>
 #include <future>
-#include <vector> // do raportu
-#include <semaphore.h> // do raportu
-#include <sys/mman.h> // do raportu
-#include <unistd.h> // do raportu
-#include <sys/wait.h> // do raportu
+#include <vector>
+#include <semaphore.h>
+#include <sys/mman.h>
+#include <unistd.h>
+#include <sys/wait.h>
 
 #include "teams.hpp"
 #include "contest.hpp"
 #include "collatz.hpp"
-
-
-// do usunięcia
-#include <iostream>
 
 void newThreadsThread(uint64_t idx, const InfInt& singleInput,
                       ContestResult& result, std::mutex& mut,
@@ -44,6 +38,7 @@ ContestResult TeamNewThreads::runContestImpl(ContestInput const & contestInput) 
 
   for (const InfInt& singleInput : contestInput) {
     std::unique_lock<std::mutex> mut_lock(mut);
+    // Main thread waits if getSize() threads is running.
     all_threads_running.wait(mut_lock, [&] { return running_threads < getSize(); });
     running_threads++;
     mut_lock.unlock();
@@ -55,6 +50,7 @@ ContestResult TeamNewThreads::runContestImpl(ContestInput const & contestInput) 
   }
 
   std::unique_lock<std::mutex> mut_lock(mut);
+  // Main thread waits until all threads finish their work.
   all_threads_running.wait(mut_lock, [&] { return running_threads == 0; });
 
   return result;
@@ -63,6 +59,7 @@ ContestResult TeamNewThreads::runContestImpl(ContestInput const & contestInput) 
 void constThreadsThread(uint32_t thread_id, uint32_t thread_num,
                         ContestResult& result, const ContestInput& contestInput,
                         const std::shared_ptr<SharedResults>& sharedResults) {
+  // Every thread gets equal (+-1) part of work.
   for (uint32_t i = thread_id; i < result.size(); i += thread_num) {
     if (sharedResults) {
       result[i] = sharedResults->calcCollatz(contestInput[i]);
@@ -114,6 +111,7 @@ ContestResult TeamPool::runContest(ContestInput const & contestInput)
   return result;
 }
 
+// shared memory
 struct newProcessesMem {
   sem_t new_process;
   uint64_t result[];
@@ -135,6 +133,7 @@ ContestResult TeamNewProcesses::runContest(ContestInput const & contestInput)
   uint32_t wait_num = 0;
 
   for (uint64_t idx = 0; idx < contestInput.size(); idx++) {
+    // Main process waits if getSize() processes is running.
     assert(!sem_wait(&(mapped_mem->new_process)));
     switch (fork()) {
       case -1:
@@ -146,6 +145,7 @@ ContestResult TeamNewProcesses::runContest(ContestInput const & contestInput)
         exit(0);
       default:
         if (idx >= thread_num) {
+          // We can use wait() with no cost because at least one process have finished working.
           wait(nullptr);
           wait_num++;
         }
@@ -153,6 +153,7 @@ ContestResult TeamNewProcesses::runContest(ContestInput const & contestInput)
     }
   }
 
+  // Main process waits until all processes finish their work.
   while (wait_num < contestInput.size()) {
     wait(nullptr);
     wait_num++;
@@ -185,6 +186,7 @@ ContestResult TeamConstProcesses::runContest(ContestInput const & contestInput)
         std::cerr << "fork" << getSize();
         exit(1);
       case 0:
+        // Every process gets equal (+-1) part of work.
         for (uint32_t i = process_id; i < contestInput.size(); i += process_num) {
           result[i] = calcCollatz(contestInput[i]);
         }
