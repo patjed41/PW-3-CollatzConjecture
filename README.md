@@ -2,6 +2,22 @@
 
 My solution for the third project of the [Concurrent programming (pol. Programowanie współbieżne)](https://usosweb.mimuw.edu.pl/kontroler.php?_action=katalog2/przedmioty/pokazPrzedmiot&prz_kod=1000-213bPW) course taken in the 2021/2022 winter semester.
 
+## Task
+
+The task was to implement many different algorithms that count the steps after which the Collatz loop stops for given integer and compare their performance. Example of such algorithms are: single-threaded, multi-threaded, multiprocess (with remembering partial results or not).
+
+## Usage
+
+To run experiment go to `src` directory and use
+```
+make
+```
+to build solution. Then run
+```
+./main
+```
+and watch how experiment is going. You can change [main.cpp](https://github.com/patjed41/PW-3-CollatzConjecture/blob/master/src/main.cpp) file to modify experiment parameters.
+
 # Full description in polish
 
 ## Wprowadzenie
